@@ -1,0 +1,322 @@
+@import url('https://fonts.googleapis.com/css2?family=Indie+Flower&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body, html {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: 'Space Mono', monospace;
+  background-color: light-dark(#f8f9fa, #212529);
+  color: light-dark(#343a40, #f8f9fa);
+  line-height: 1.6;
+}
+
+body.gallery-bg {
+  background: url('assets/gallery-bg.jpg') center/cover no-repeat fixed !important;
+  min-height: 100vh;
+}
+
+.center-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 1200px;
+  margin: 20px auto;
+}
+
+#auth-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 32px 0 32px;
+  background: none;
+}
+
+h1 {
+  margin-bottom: 40px;
+  color: light-dark(#212529, #ffffff);
+  text-align: center;
+}
+
+#examples {
+  list-style: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+#examples li {
+  margin-bottom: 10px;
+  padding: 15px 20px;
+  border: 1px solid light-dark(#dee2e6, #495057);
+  border-radius: 6px;
+  background-color: light-dark(#ffffff, #343a40);
+  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+#examples li:hover {
+  background-color: light-dark(#e9ecef, #495057);
+  border-color: light-dark(#adb5bd, #adb5bd);
+  box-shadow: 0 2px 4px light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.05));
+}
+
+#slideshow-frame {
+  width: 100%;
+  max-width: 960px;
+  min-height: 400px;
+  margin: 32px auto 28px auto;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px #e3e3e3;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  overflow-x: auto;
+  padding: 30px 16px 40px 16px;
+}
+
+#slideshow {
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  gap: 25px;
+  min-height: 320px;
+  width: 100%;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.slide {
+  min-width: 320px;
+  max-width: 370px;
+  min-height: 340px;
+  background: #f8f8fb;
+  border-radius: 14px;
+  margin: 0 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  border: 1px solid #e9ecef;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 25px 18px 18px 18px;
+  scroll-snap-align: center;
+  transition: transform 0.2s;
+}
+
+.slide img {
+  height: 220px;
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: 0px;
+  box-shadow: 0 2px 8px #bbb;
+  background: #fff;
+}
+
+.slide div {
+  font-size: 22px;
+  text-align: center;
+  margin-top: 18px;
+  color: #495057;
+}
+
+#slideshow[hidden] {
+  display: none !important;
+}
+
+.input-row.center-input {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 24px 0;
+}
+
+#email-auth {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 16px auto 8px auto;
+}
+
+#auth-message {
+  color: #f44336;
+  font-size: 0.95em;
+  margin-left: 10px;
+}
+
+textarea#input {
+  min-width: 320px;
+  min-height: 60px;
+  font-size: 1.05em;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  resize: vertical;
+  background-color: light-dark(#ffffff, #343a40);
+  color: light-dark(#343a40, #f8f9fa);
+}
+
+textarea#input:focus {
+  outline: none;
+  border-color: light-dark(#1c7ed6, #66b2ff);
+  box-shadow: 0 0 0 2px light-dark(rgba(28, 126, 214, 0.2), rgba(102, 178, 255, 0.2));
+}
+
+button {
+  font-size: 1em;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  background: #2d7ff9;
+  color: white;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+button:disabled {
+  background: #b3c5e6;
+  cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+  background: #1558b0;
+}
+
+#run-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.1rem;
+  padding: 12px 20px;
+  border-radius: 6px;
+  border: 1px solid #adb5bd;
+  background-color: #e9ecef;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+#run-btn:hover {
+  background-color: #dee2e6;
+}
+
+#output, #error {
+  margin-top: 24px;
+}
+
+#output + p {
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: light-dark(#495057, #dee2e6);
+}
+
+#error {
+  font-weight: bold;
+  padding: 15px 20px;
+  background-color: light-dark(#ffe7e7, #660b0b);
+  border-radius: 6px;
+  border-left: 4px solid light-dark(#d61c1c, #ff6666);
+}
+
+#user-info {
+  font-weight: bold;
+  color: #2d7ff9;
+}
+
+.user-turn {
+  font-weight: bold;
+  padding: 15px 20px;
+  background-color: light-dark(#e7f5ff, #0b3d66);
+  border-radius: 6px;
+  border-left: 4px solid light-dark(#1c7ed6, #66b2ff);
+}
+
+#save-story-row {
+  margin-top: 20px;
+  text-align: center;
+}
+
+#save-story-btn {
+  font-size: 1em;
+  padding: 8px 18px;
+  border-radius: 6px;
+  background: #ffb300;
+  color: #222;
+  border: none;
+  margin-right: 10px;
+  transition: background 0.15s;
+}
+
+#save-story-btn:disabled {
+  background: #ffe082;
+  color: #aaa;
+  cursor: not-allowed;
+}
+
+#save-story-btn:hover:not(:disabled) {
+  background: #ff8f00;
+}
+
+#save-story-message {
+  font-size: 1em;
+  color: #2196f3;
+}
+
+/* 갤러리 썸네일 스타일 */
+.gallery-thumb {
+  width: 160px;
+  height: 160px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 2px 8px #bbb;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.gallery-thumb:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px #aaa;
+}
+#gallery-section h2 {
+  margin-bottom: 12px;
+}
+#gallery-list {
+  margin-bottom: 24px;
+}
+#gallery-viewer {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 4px 24px #ddd;
+  padding: 24px 0 12px 0;
+  max-width: 420px;
+  margin: 0 auto;
+}
+#gallery-slide-indicator {
+  margin-top: 8px;
+  color: #888;
+  font-size: 15px;
+}
+
+#gallery-main {
+  background: rgba(255,255,255,0.90);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px #d1d1d1;
+  padding: 36px 32px 28px 32px;
+  max-width: 900px;
+  margin: 60px auto 0 auto;
+}

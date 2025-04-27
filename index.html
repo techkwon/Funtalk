@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>포메에게 물어봐</title>
+  <link rel="stylesheet" href="./index.css" />
+  <!-- <script>
+    // API 키를 window 객체에 설정 (config.js가 실패할 경우 대비) - Firebase Hosting 환경에서는 불필요
+    // window.OPENAI_API_KEY = "...";
+  </script> -->
+  <style>
+    body.landing-bg {
+      background: url('assets/landing-bg-pome2.jpg') center/cover no-repeat fixed;
+      min-height: 100vh;
+    }
+    .landing-content {
+      background: rgba(255,255,255,0.85);
+      border-radius: 24px;
+      box-shadow: 0 8px 32px #d1d1d1;
+      padding: 36px 32px 28px 32px;
+      max-width: 480px;
+      margin: 60px auto 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    .landing-content h1 {
+      font-size: 2.3rem;
+      font-weight: 700;
+      margin: 28px 0 18px 0;
+      letter-spacing: -1px;
+      color: #222;
+      text-align: center;
+    }
+    .landing-content .search-row {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      margin: 16px 0 32px 0;
+    }
+    .landing-content .search-row input {
+      flex: 1;
+      font-size: 1.25em;
+      padding: 12px 14px;
+      border-radius: 8px 0 0 8px;
+      border: 1.5px solid #bbb;
+      outline: none;
+      background: #fff;
+      transition: border 0.2s;
+    }
+    .landing-content .search-row button {
+      font-size: 1.25em;
+      padding: 12px 18px;
+      border-radius: 0 8px 8px 0;
+      border: 1.5px solid #bbb;
+      background: #ffb300;
+      color: #222;
+      cursor: pointer;
+      font-weight: bold;
+      border-left: none;
+      transition: background 0.15s;
+    }
+    .landing-content .landing-actions {
+      display: flex;
+      gap: 18px;
+      width: 100%;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .landing-content .landing-actions button {
+      font-size: 1.1em;
+      padding: 10px 26px;
+      border-radius: 8px;
+      border: 1.5px solid #bbb;
+      background: #fff;
+      color: #222;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    .landing-content .landing-actions button:hover {
+      background: #f7f7fa;
+    }
+    .login-link {
+      position: absolute;
+      top: 30px;
+      right: 40px;
+      font-size: 1.1em;
+      color: #222;
+      font-weight: 500;
+      text-decoration: none;
+      background: #fff;
+      border-radius: 8px;
+      padding: 8px 18px;
+      border: 1px solid #ddd;
+      transition: background 0.15s;
+      z-index: 2;
+    }
+    .login-link:hover {
+      background: #f0f0f0;
+    }
+    .gallery-link {
+      position: absolute;
+      top: 30px;
+      left: 40px;
+      font-size: 1.1em;
+      color: #222;
+      font-weight: 500;
+      text-decoration: none;
+      background: #fff;
+      border-radius: 8px;
+      padding: 8px 18px;
+      border: 1px solid #ddd;
+      transition: background 0.15s;
+      z-index: 2;
+    }
+    .gallery-link:hover {
+      background: #f0f0f0;
+    }
+    .landing-content img {
+      width: 160px;
+      height: 160px;
+      object-fit: contain;
+      border-radius: 50%;
+      margin-bottom: 8px;
+      box-shadow: 0 2px 12px #e5e5e5;
+    }
+    .logout-btn {
+      position: absolute;
+      top: 30px;
+      right: 40px;
+      font-size: 1.1em;
+      color: #222;
+      font-weight: 500;
+      background: #fff;
+      border-radius: 8px;
+      padding: 8px 18px;
+      border: 1px solid #ddd;
+      transition: background 0.15s;
+      z-index: 2;
+    }
+    .logout-btn:hover {
+      background: #f0f0f0;
+    }
+    
+    /* --- 로그인 UI 스타일 수정 --- */
+    #email-auth {
+      display: none; /* 기본적으로 숨김 */
+      position: absolute;
+      top: 65px; /* login-link 아래에 위치하도록 조정 (버튼 높이 + 간격) */
+      right: 40px; /* login-link와 동일한 오른쪽 정렬 */
+      width: 280px; /* 적절한 너비 */
+      background: white;
+      padding: 25px 20px 20px 20px;
+      border-radius: 12px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+      z-index: 10; /* 다른 요소 위에 표시 */
+      flex-direction: column;
+      align-items: center;
+      gap: 12px; /* 내부 요소 간격 조정 */
+    }
+    #email-auth input {
+        width: calc(100% - 24px); /* 패딩 고려한 너비 */
+        padding: 10px 12px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        font-size: 1em;
+    }
+    #email-auth .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 8px;
+    }
+    #email-auth button {
+        padding: 10px 18px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        background-color: #ffb300;
+        color: #333;
+        font-weight: bold;
+        font-size: 0.95em;
+        transition: background-color 0.2s;
+    }
+    #email-auth button:hover {
+        background-color: #ffa000;
+    }
+    #auth-message {
+        height: 20px;
+        font-size: 0.9em;
+        color: #f44336; /* 기본 에러 색상 */
+        text-align: center;
+        width: 100%;
+        margin-top: 5px;
+    }
+    /* --- 로그인 UI 스타일 끝 --- */
+  </style>
+</head>
+<body class="landing-bg">
+  <div class="landing-content">
+    <a href="gallery.html" class="gallery-link" id="gallery-link">갤러리</a>
+    <a href="#" class="login-link" id="login-link" style="display:none;">로그인</a>
+    <button id="logout-btn" class="logout-btn" style="display:none;">로그아웃</button>
+    <img src="assets/pome-main.png" alt="포메" />
+    <h1>포메에게 물어봐</h1>
+    <div class="search-row">
+      <input id="input" type="text" placeholder="질문을 입력하세요..." />
+      <button id="run-btn">🔍</button>
+    </div>
+    <div id="output"></div>
+    <div id="slideshow-frame">
+      <div id="slideshow" hidden></div>
+    </div>
+    <div id="error" hidden style="color:#f44336;margin-top:16px;"></div>
+    <div class="landing-actions">
+      <button id="save-story-btn" disabled>이야기 저장하기</button>
+      <div id="save-story-message" style="margin-top:8px;font-size:1em;color:#2196f3;"></div>
+      <button id="tts-gen-btn" disabled>음성 생성하기</button>
+      <div id="tts-gen-message" style="margin-top:8px;font-size:1em;color:#4caf50;"></div>
+    </div>
+    <!-- 로그인/회원가입 UI (스타일은 위 CSS에서 적용) -->
+    <div id="email-auth">
+      <input id="email" type="email" placeholder="이메일" />
+      <input id="password" type="password" placeholder="비밀번호" />
+      <div class="button-group">
+        <button id="email-signup-btn">회원가입</button>
+        <button id="email-login-btn">로그인</button>
+      </div>
+      <div id="auth-message"></div>
+    </div>
+  </div>
+  <!-- Firebase 및 설정 스크립트 -->
+  <script type="module" src="./firebaseConfig.js"></script>
+  <script type="module" src="./config.js"></script> 
+  <!-- TTS 유틸리티 스크립트 (index.js보다 먼저 로드) -->
+  <script type="module" src="./ttsUtils.js"></script>
+  <!-- 메인 스크립트 -->
+  <script type="module" src="./index.js"></script>
+</body>
+</html>

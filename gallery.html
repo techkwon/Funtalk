@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FunTalk 갤러리</title>
+  <link rel="stylesheet" href="./index.css" />
+  <style>
+    body { background:#f7f7fa; margin:0; font-family:'Pretendard',sans-serif; }
+    #gallery-main { max-width:900px; margin:40px auto 0 auto; padding:0 10px; }
+    .back-btn { margin-bottom:24px; background:#fff; border-radius:8px; border:1px solid #ddd; padding:8px 18px; font-size:16px; cursor:pointer; }
+    .back-btn:hover { background:#f0f0f0; }
+  </style>
+</head>
+<body class="gallery-bg">
+  <div id="gallery-main">
+    <button class="back-btn" onclick="window.location.href='index.html'">처음으로</button>
+    <h1 style="text-align:center;">FunTalk 갤러리</h1>
+    <div id="gallery-list" style="display:flex; flex-wrap:wrap; justify-content:center; gap:20px; margin-top:30px;"></div>
+  </div>
+  <div id="gallery-viewer" style="display:none; flex-direction:column; align-items:center; margin-top:30px;">
+    <div id="gallery-slideshow" style="width:360px; height:360px; background:#f8f8f8; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:16px; box-shadow:0 2px 8px #ccc; margin-bottom:16px;"></div>
+    <div style="margin-bottom:16px;">
+      <button id="gallery-prev-btn">이전</button>
+      <button id="gallery-next-btn">다음</button>
+      <button id="gallery-preview-btn">미리보기</button>
+      <button id="gallery-tts-btn">음성 생성하기</button>
+      <button id="gallery-close-btn">닫기</button>
+    </div>
+    <div id="gallery-slide-indicator"></div>
+    <div id="gallery-tts-message" style="margin-top:8px;font-size:1em;color:#4caf50;"></div>
+  </div>
+  <!-- Firebase 및 설정 스크립트 -->
+  <script type="module" src="./firebaseConfig.js"></script>
+  <script type="module" src="./config.js"></script> 
+  <!-- TTS 유틸리티 스크립트 (gallery.js보다 먼저 로드) -->
+  <script type="module" src="./ttsUtils.js"></script>
+  <!-- 메인 스크립트 -->
+  <script type="module" src="./gallery.js"></script>
+</body>
+</html>
