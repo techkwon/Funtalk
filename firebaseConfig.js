@@ -7,7 +7,7 @@ export const firebaseConfig = {
   apiKey: "AIzaSyDta1zwalDfceLCCkhwfAMuDufsf_aaOIE",
   authDomain: "fairytale-186ee.firebaseapp.com",
   projectId: "fairytale-186ee",
-  storageBucket: "fairytale-186ee.appspot.com", // 올바른 스토리지 버킷 이름으로 수정
+  storageBucket: "fairytale-186ee.firebasestorage.app", // 올바른 스토리지 버킷 이름으로 수정
   messagingSenderId: "226743877675",
   appId: "1:226743877675:web:6942fe5e5f7fd566626a6e",
   measurementId: "G-NJB455BDMV"

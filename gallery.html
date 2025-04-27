@@ -14,9 +14,16 @@
 </head>
 <body class="gallery-bg">
   <div id="gallery-main">
-    <button class="back-btn" onclick="window.location.href='index.html'">처음으로</button>
+    <button class="back-btn" onclick="window.location.href='index.html'" style="color: #333;">처음으로</button>
     <h1 style="text-align:center;">FunTalk 갤러리</h1>
-    <div id="gallery-list" style="display:flex; flex-wrap:wrap; justify-content:center; gap:20px; margin-top:30px;"></div>
+    <!-- 삭제 모드 토글 버튼 컨테이너 -->
+    <div id="delete-toggle-container" style="text-align: right; margin-bottom: 15px;"></div>
+    <!-- 선택 항목 삭제/취소 버튼 컨테이너 (위치 이동) -->
+    <div id="delete-mode-controls" style="text-align: center; margin-bottom: 20px; display: none;">
+      <button id="confirm-delete-btn" class="gallery-delete-btn" style="background-color: red; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">선택 항목 삭제</button>
+      <button id="cancel-delete-btn" style="margin-left: 10px; padding: 10px 20px; border: 1px solid #ccc; border-radius: 5px; background-color: #eee; cursor: pointer;">취소</button>
+    </div>
+    <div id="gallery-list" style="display:flex; flex-wrap:wrap; justify-content:center; gap:20px; margin-top:0;"></div>
   </div>
   <div id="gallery-viewer" style="display:none; flex-direction:column; align-items:center; margin-top:30px;">
     <div id="gallery-slideshow" style="width:360px; height:360px; background:#f8f8f8; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:16px; box-shadow:0 2px 8px #ccc; margin-bottom:16px;"></div>

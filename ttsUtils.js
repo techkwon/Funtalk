@@ -2,7 +2,6 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth
 import { addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import { ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 import { db, storage } from "./firebaseConfig.js";
-import { OPENAI_API_KEY } from "./config.js"; // OpenAI API 키 가져오기
 
 const auth = getAuth();
 
@@ -19,9 +18,6 @@ function blobToBase64(blob) {
 // TTS 생성 및 Storage 업로드 함수 (export 추가)
 export async function generateAndUploadTTS(text, order, title) {
   console.log(`[TTS Utils] generateAndUploadTTS 호출됨: title=${title}, order=${order}`);
-  if (!OPENAI_API_KEY) {
-      throw new Error("OpenAI API Key가 설정되지 않았습니다.");
-  }
   const url = "https://api.openai.com/v1/audio/speech";
   const headers = {
     "Authorization": `Bearer ${OPENAI_API_KEY}`,

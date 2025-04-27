@@ -1,39 +1,89 @@
 // index.js 최상단 로그
 console.log('[index.js] 파일 시작');
 
-// .env 또는 config.js에서 OPENAI_API_KEY를 읽어오는 코드 추가
-// (1) config.js에서 export된 OPENAI_API_KEY가 있으면 사용
-// (2) window.OPENAI_API_KEY가 있으면 사용
-// (3) 없으면 안내 메시지
-let OPENAI_API_KEY = '';
-try {
-  if (typeof window !== 'undefined' && window.OPENAI_API_KEY) {
-    OPENAI_API_KEY = window.OPENAI_API_KEY;
-  } else if (typeof OPENAI_API_KEY !== 'undefined') {
-    // 이미 전역에 선언되어 있으면 사용
-    OPENAI_API_KEY = OPENAI_API_KEY;
-  } else if (typeof importScripts === 'function') {
-    // 웹워커 환경 등
-    // pass
-  } else {
-    // config.js에서 import 시도
+// --- 전역 변수 선언 --- 
+let GEMINI_API_KEY = '';
+let genAI = null;
+let chat = null;
+
+// --- GoogleGenerativeAI 임포트 (동적) ---
+let GoogleGenerativeAI = null;
+
+// --- API 키 로드 및 클라이언트 초기화 함수 --- 
+async function initializeGeminiClient() {
+  // GoogleGenerativeAI SDK 동적 임포트
+  if (!GoogleGenerativeAI) { 
     try {
-      // 동적 import 사용
-      import('./config.js').then(module => {
-        OPENAI_API_KEY = module.OPENAI_API_KEY;
-      }).catch(() => {
-        // config.js 로드 실패
-      });
-    } catch (e) {
-      // pass
+      const genAIModule = await import("https://esm.run/@google/generative-ai");
+      GoogleGenerativeAI = genAIModule.GoogleGenerativeAI;
+      console.log('GoogleGenerativeAI SDK 로드 완료');
+    } catch (sdkError) {
+       console.error('GoogleGenerativeAI SDK 로드 실패:', sdkError);
+       alert('AI 라이브러리 로드에 실패했습니다. 네트워크 연결을 확인하고 페이지를 새로고침 해보세요.');
+       return; // SDK 로드 실패 시 초기화 중단
     }
   }
-} catch (e) {
-  // pass
+  
+  // API 키 로드
+  if (!GEMINI_API_KEY) { // API 키가 이미 로드되었는지 확인
+     try {
+       const config = await import('./config.js');
+       if (config && config.GEMINI_API_KEY) {
+         GEMINI_API_KEY = config.GEMINI_API_KEY;
+       } else {
+         // 2. window 객체에서 가져오기 (대체)
+         if (typeof window !== 'undefined' && window.GEMINI_API_KEY) {
+           GEMINI_API_KEY = window.GEMINI_API_KEY;
+         }
+       }
+     } catch(e) {
+       console.warn('config.js 로드 실패 또는 API 키를 찾을 수 없음:', e);
+     }
+  }
+
+  if (!GEMINI_API_KEY) {
+    console.error(' 중요: Gemini API 키가 정의되지 않았습니다! config.js 또는 window.GEMINI_API_KEY를 설정해주세요.');
+    console.warn('⚠️ 경고: API 키를 클라이언트 코드에 직접 노출하는 것은 보안 위험이 있습니다. 서버 측에서 처리하는 것이 좋습니다.');
+    return; // API 키 없으면 초기화 중단
+  }
+
+  // 3. API 키 로드 성공 후 클라이언트 초기화
+  if (GoogleGenerativeAI) {
+    try {
+      genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-2.0-flash-exp-image-generation",
+        generationConfig: {
+           response_modalities: ["TEXT", "IMAGE"] // 텍스트와 이미지 응답 명시적 요청
+        }
+      });
+      chat = model.startChat({
+        generationConfig: {
+           response_modalities: ["TEXT", "IMAGE"] // 텍스트와 이미지 응답 명시적 요청
+        }
+      });
+      console.log('Gemini AI 클라이언트 초기화 완료 (모델: gemini-2.0-flash-exp-image-generation, 모달리티 설정됨)');
+    } catch (initError) {
+       console.error('Gemini AI 클라이언트 초기화 중 오류 발생:', initError);
+       alert('Gemini 클라이언트 초기화에 실패했습니다. API 키가 올바른지 확인하세요.');
+    }
+  } else {
+    console.error('GoogleGenerativeAI SDK가 로드되지 않았습니다.');
+    alert('AI 라이브러리를 로드하지 못했습니다. 페이지를 새로고침 해보세요.');
+  }
 }
-if (!OPENAI_API_KEY) {
-  console.warn('OPENAI_API_KEY가 정의되어 있지 않습니다. config.js 또는 window.OPENAI_API_KEY로 설정하세요.');
-}
+
+// --- 비동기 초기화 실행 --- 
+initializeGeminiClient(); 
+
+// --- 나머지 코드 (import, Firebase 설정 등) --- 
+import { marked } from 'https://esm.sh/marked@^15.0.7';
+import { getAuth, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import { doc, setDoc, serverTimestamp, collection, addDoc, query, getDocs, where, orderBy } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+import { ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+import { db, storage } from "./firebaseConfig.js";
+
+const auth = getAuth();
 
 // --- DOMContentLoaded 보장 및 generate 방어 ---
 if (document.readyState === 'loading') {
@@ -46,414 +96,345 @@ if (document.readyState === 'loading') {
 }
 
 console.log('index.js script loaded');
-import { GoogleGenAI } from 'https://esm.sh/@google/genai@0.6.0';
-import { marked } from 'https://esm.sh/marked@^15.0.7';
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-import { doc, setDoc, serverTimestamp, collection, addDoc, query, getDocs, where, orderBy } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-import { ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
-import { db, storage } from "./firebaseConfig.js";
-// ttsUtils.js에서 함수 가져오기
-import { generateAndUploadTTS, saveTTSUrlToFirestore } from './ttsUtils.js';
-
-const auth = getAuth();
-const provider = new GoogleAuthProvider();
 
 function debugLog(msg) {
     console.log('[DEBUG]', msg);
 }
-const ai = new GoogleGenAI({ apiKey: 'AIzaSyBu3dI321KSpWeu1Q5EJhwypH0fB-yZ2gE' });
-const chat = ai.chats.create({
-  model: 'gemini-2.0-flash-exp',
-  config: {
-    responseModalities: ['TEXT', 'IMAGE'],
-  },
-  history: [],
-});
-const additionalInstructions = `\nUse a fairy tale story about white Pomeranian as a metaphor.\nKeep sentences short but conversational, casual, educational and engaging.\nGenerate a cute, animate for each sentence with ink-painting on white background.\nNo commentary, just begin your explanation. speak korean.\nKeep going until you're done.`;
 
-async function addSlide(text, image) {
-    debugLog('addSlide called');
-    const slideshow = document.querySelector('#slideshow');
-    slideshow.removeAttribute('hidden');
-    const slide = document.createElement('div');
-    slide.className = 'slide';
-    const caption = document.createElement('div');
-    caption.innerHTML = await marked.parse(text);
-    slide.append(image);
-    slide.append(caption);
-    slideshow.append(slide);
-    // 슬라이드 추가 시 마지막 스토리 정보 저장 및 저장 버튼 활성화
-    setLastStory(text, image.src);
-}
-function parseError(error) {
-    debugLog('parseError called');
-    if (typeof error === 'string') {
-        const regex = /{"error":(.*)}/gm;
-        const m = regex.exec(error);
-        try {
-            const e = m[1];
-            const err = JSON.parse(e);
-            return err.message;
-        }
-        catch (e) {
-            return error;
-        }
-    }
-    if (error && error.message)
-        return error.message;
-    return String(error);
-}
-async function generate(message) {
-  // // 주석 처리 또는 삭제: generate 함수 시작 부분의 로그인 확인 로직
-  // console.log('[generate] 함수 시작');
-  // const user = auth.currentUser;
-  // console.log('[generate] 현재 사용자:', user);
-  // if (!user) {
-  //   console.log('[generate] 로그인되지 않음. 로그인 UI 표시 시도.');
-  //   alert('스토리 생성을 위해 로그인이 필요합니다.');
-  //   const emailAuth = document.getElementById('email-auth');
-  //   if (emailAuth) {
-  //     console.log('[generate] email-auth 요소 찾음, 표시.');
-  //     emailAuth.style.display = 'flex'; 
-  //   } else {
-  //     console.error('[generate] email-auth 요소를 찾을 수 없음!');
-  //   }
-  //   return; 
-  // }
-  // console.log('[generate] 로그인 확인됨.');
-
-  // --- 페이지 로드 상태 확인 --- (기존 로직 유지)
-  if (!window._domReady) {
-    alert('페이지가 완전히 로드되지 않았습니다. 잠시 후 다시 시도해 주세요.');
-    return;
-  }
-  // --- 메시지 유효성 검사 --- (기존 로직 유지)
-  if (!message || typeof message !== 'string' || !message.trim()) {
-    debugLog('generate: 빈 메시지로 호출됨');
-    return;
-  }
-  
-  debugLog('[generate] 함수 실행'); // generate 로직 시작 로그
-  
-  const userInput = document.querySelector('#input');
-  if (!userInput) {
-    console.error('userInput DOM 요소를 찾을 수 없습니다. index.html 구조와 id="input"을 확인하세요.');
-    return;
-  }
-  const modelOutput = document.querySelector('#output');
+// --- 슬라이드 추가 함수 (복구 및 수정) ---
+async function addSlide(text, imageData) {
+  debugLog('addSlide 호출됨');
   const slideshow = document.querySelector('#slideshow');
-  const error = document.querySelector('#error');
-  // DOM 요소 존재 여부 체크 (문제 발생 시 에러 메시지)
-  if (!modelOutput || !slideshow || !error) {
-    alert('필수 UI 요소가 없습니다. 새로고침 후 다시 시도하거나, index.html 구조를 확인하세요.');
-    return;
+  if (!slideshow) return;
+  slideshow.removeAttribute('hidden');
+  const slide = document.createElement('div');
+  slide.className = 'slide';
+  
+  // 캡션 생성
+  const caption = document.createElement('div');
+  caption.innerHTML = await marked.parse(text);
+  
+  // 이미지 생성 (Base64 데이터 사용)
+  let imgElement = null;
+  if (imageData) {
+      imgElement = document.createElement('img');
+      imgElement.src = `data:image/png;base64,${imageData}`; // MIME 타입은 필요시 조정
+      // 이미지 스타일 추가 (기존 CSS 또는 인라인)
+      imgElement.style.width = '90%'; 
+      imgElement.style.maxHeight = '220px';
+      imgElement.style.borderRadius = '10px';
+      imgElement.style.margin = '16px 0 8px 0';
+  } else {
+      console.warn('addSlide: 이미지 데이터가 없습니다.');
+      // 이미지가 없을 경우 대체 텍스트나 아이콘 표시 가능
   }
-  if (userInput) userInput.disabled = true;
-  let timeoutId = setTimeout(() => {
-    if (userInput && 'disabled' in userInput) {
-      try {
-        userInput.disabled = false;
-        userInput.focus();
-      } catch (err) {
-        console.error('userInput 상태 복원 중 오류:', err);
-      }
-    }
-    console.error('응답이 없습니다. 다시 입력해 주세요.');
-  }, 5000);
-  chat.history.length = 0;
-  modelOutput.innerHTML = '';
-  // 기존 슬라이드 모두 제거 및 숨김
-  slideshow.innerHTML = '';
-  slideshow.setAttribute('hidden', true);
-  error.innerHTML = '';
-  allStories = []; // 새로 생성할 때마다 초기화
-  storyTitle = message; // 제목 저장
-  try {
-    const userTurn = document.createElement('div');
-    userTurn.innerHTML = await marked.parse(message);
-    userTurn.className = 'user-turn';
-    modelOutput.append(userTurn);
-    userInput.value = '';
-    const result = await chat.sendMessageStream({
-      message: message + additionalInstructions,
-    });
-    let text = '';
-    let img = null;
-    let gotResponse = false;
-    for await (const chunk of result) {
-      gotResponse = true;
-      for (const candidate of chunk.candidates) {
-        for (const part of candidate.content.parts ?? []) {
-          if (part.text) {
-            text += part.text;
-          } else {
-            try {
-              const data = part.inlineData;
-              if (data) {
-                img = document.createElement('img');
-                img.src = `data:image/png;base64,` + data.data;
-              } else {
-                debugLog('no data', chunk);
-              }
-            } catch (e) {
-              debugLog('no data', chunk);
-            }
-          }
-          if (text && img) {
-            await addSlide(text, img);
-            text = '';
-            img = null;
-          }
-        }
-      }
-    }
-    if (img) {
-      await addSlide(text, img);
-      text = '';
-    }
-    const title = message;
-    enableTTSButton(title);
-    if (gotResponse) {
-      clearTimeout(timeoutId);
-      if (userInput && 'disabled' in userInput) {
-        try {
-          userInput.disabled = false;
-          userInput.focus();
-        } catch (err) {
-          console.error('userInput 상태 복원 중 오류:', err);
-        }
-      }
-      await openGalleryAfterGeneration();
-      showGenerationComplete();
-    }
-  } catch (e) {
-    clearTimeout(timeoutId);
-    const msg = parseError(e);
-    console.error('Something went wrong:', msg);
-    if (userInput && 'disabled' in userInput) {
-      try {
-        userInput.disabled = false;
-        userInput.focus();
-      } catch (err) {
-        console.error('userInput 상태 복원 중 오류:', err);
-      }
-    }
+  
+  // 슬라이드에 이미지(있다면)와 캡션 추가
+  if (imgElement) {
+      slide.append(imgElement);
   }
+  slide.append(caption);
+  slideshow.append(slide);
+
+  // --- 스토리 저장 준비 (allStories 배열 채우기) ---
+  // saveStoryToFirestore 함수는 이제 base64 데이터를 받거나, 
+  // Cloud Function에서 Storage 업로드 후 URL을 반환받아 사용하도록 수정 필요.
+  // 우선 allStories에는 base64 데이터와 텍스트 저장.
+  allStories.push({ text, imageData }); 
+  
+  // --- 저장 및 TTS 버튼 활성화 (스토리 데이터 준비 완료) ---
+  const saveBtn = document.getElementById('save-story-btn');
+  const ttsBtn = document.getElementById('tts-gen-btn');
+  if (saveBtn) saveBtn.disabled = false;
+  if (ttsBtn) ttsBtn.disabled = false;
 }
+
 let lastStoryText = '';
 let lastStoryImageUrl = '';
 let allStories = [];
 let storyTitle = '';
 
-function setLastStory(text, imageUrl) {
-  lastStoryText = text;
-  lastStoryImageUrl = imageUrl;
-  document.getElementById('save-story-btn').disabled = false;
-  // 새로운 슬라이드가 추가될 때마다 배열에도 추가
-  allStories.push({ text, imageUrl });
-  const ttsGenBtn = document.getElementById('tts-gen-btn');
-  if (ttsGenBtn) ttsGenBtn.disabled = false;
-}
-
-function clearLastStory() {
-  lastStoryText = '';
-  lastStoryImageUrl = '';
-  document.getElementById('save-story-btn').disabled = true;
-  allStories = [];
-  storyTitle = '';
-  const ttsGenBtn = document.getElementById('tts-gen-btn');
-  if (ttsGenBtn) ttsGenBtn.disabled = true;
-}
-
-async function saveStoryToFirestore(text, imageUrl, order = null, title = null) {
-  const user = auth.currentUser;
-  if (!user) {
-    console.error('로그인이 필요합니다.');
-    alert('이야기를 저장하려면 로그인이 필요합니다.');
-    return false;
+// --- generate 함수 수정: 클라이언트 측 Gemini 호출 --- 
+async function generate(message) {
+  // --- 페이지 로드, 메시지 유효성, API 클라이언트 확인 --- 
+  if (!window._domReady) {
+    alert('페이지가 완전히 로드되지 않았습니다. 잠시 후 다시 시도해 주세요.');
+    return;
   }
-  let finalImageUrl = imageUrl;
-  try {
-    if (imageUrl && imageUrl.startsWith('data:image/')) {
-      const ext = imageUrl.substring(11, imageUrl.indexOf(';'));
-      const fileName = `stories/${user.uid}_${Date.now()}.${ext}`;
-      const storageRef = ref(storage, fileName);
-      const base64 = imageUrl.split(',')[1];
-      await uploadString(storageRef, base64, 'base64');
-      finalImageUrl = await getDownloadURL(storageRef);
+  if (!message || typeof message !== 'string' || !message.trim()) {
+    debugLog('generate: 빈 메시지로 호출됨');
+    return;
+  }
+  if (!chat) {
+    console.error('Gemini chat instance is not initialized. Trying to re-initialize...');
+    // 초기화 재시도 또는 사용자에게 알림 강화
+    await initializeGeminiClient(); // 초기화 함수 다시 호출 시도
+    if (!chat) {
+      alert('Gemini AI 클라이언트 초기화에 실패했습니다. API 키 및 네트워크 연결을 확인하고 페이지를 새로고침 해주세요.');
+      return; 
     }
-    const docData = {
-      uid: user.uid,
-      text,
-      imageUrl: finalImageUrl,
-      createdAt: serverTimestamp(),
-    };
-    if (order !== null) docData.order = order;
-    if (title !== null) docData.title = title;
-    await addDoc(collection(db, "stories"), docData);
-    debugLog('스토리 Firestore 저장 성공');
-    return true;
+  }
+
+  debugLog('[generate] 클라이언트 측 Gemini API 호출 시작');
+
+  const userInput = document.querySelector('#input');
+  const modelOutput = document.querySelector('#output');
+  const slideshow = document.querySelector('#slideshow');
+  const errorDisplay = document.querySelector('#error');
+  const saveStoryBtn = document.getElementById('save-story-btn');
+  const ttsGenBtn = document.getElementById('tts-gen-btn');
+
+  // --- UI 초기화 --- 
+  if (userInput) userInput.disabled = true;
+  if (saveStoryBtn) saveStoryBtn.disabled = true;
+  if (ttsGenBtn) ttsGenBtn.disabled = true;
+  modelOutput.innerHTML = '';
+  slideshow.innerHTML = '';
+  slideshow.setAttribute('hidden', true);
+  errorDisplay.innerHTML = '';
+  errorDisplay.hidden = true;
+  allStories = []; // 초기화
+  storyTitle = message; // 제목 저장
+
+  // 사용자 입력 표시
+  const userTurn = document.createElement('div');
+  userTurn.innerHTML = await marked.parse(message);
+  userTurn.className = 'user-turn';
+  modelOutput.append(userTurn);
+  userInput.value = '';
+
+  // 로딩 표시
+  const loadingDiv = document.createElement('div');
+  loadingDiv.textContent = '포메가 이야기를 생각하고 있어요... 🐾';
+  loadingDiv.style.marginTop = '15px';
+  modelOutput.append(loadingDiv);
+
+  try {
+    // --- Gemini API 호출 (sendMessageStream 사용 - 스트리밍 복원) ---
+    const additionalInstructions = `
+Use a fairy tale story about white Pomeranian as a metaphor.
+Keep korean sentences short but conversational, casual, educational and engaging.
+Generate a cute, animate for each sentence with ink-painting on white background.
+No commentary, just begin your explanation.
+Keep going until you\'re done.`;
+    const fullPrompt = message + additionalInstructions;
+
+    // --- chat.sendMessageStream 호출 (스트리밍) ---
+    // chat 객체는 initializeGeminiClient에서 이미 생성 및 설정됨
+    const result = await chat.sendMessageStream(fullPrompt);
+
+    // --- 스트림 처리 로직 복원 및 수정 ---
+    let currentText = '';
+    let currentImageData = null;
+    let slideAdded = false; // 슬라이드가 최소 하나 추가되었는지 확인
+
+    for await (const chunk of result.stream) {
+      // 로딩 표시 제거 (첫 청크 수신 시)
+      if (loadingDiv.parentNode) {
+        loadingDiv.remove();
+      }
+
+      // 청크에서 텍스트 추출
+      const chunkText = chunk.text ? chunk.text() : null;
+      if (chunkText) {
+        currentText += chunkText;
+      }
+
+      // 청크에서 이미지 데이터 추출 (inlineData 구조 확인)
+      let chunkImageData = null;
+      if (chunk.candidates && chunk.candidates.length > 0 && chunk.candidates[0].content && chunk.candidates[0].content.parts) {
+         const imagePart = chunk.candidates[0].content.parts.find(part => part.inlineData);
+         if (imagePart && imagePart.inlineData.data) {
+           chunkImageData = imagePart.inlineData.data; // Base64 데이터
+           console.log('Gemini API: 이미지 데이터(base64) 수신됨 (Stream Chunk)');
+         }
+      }
+
+      // 이미지 데이터가 있으면, 현재까지의 텍스트와 함께 슬라이드 추가
+      if (chunkImageData) {
+        await addSlide(currentText || ' ', chunkImageData);
+        slideshow.removeAttribute('hidden');
+        slideAdded = true;
+        currentText = ''; // 슬라이드 추가 후 텍스트 초기화
+        // 스트리밍에서는 이미지 받은 후 currentImageData를 바로 null 처리할 필요 없음
+      }
+    }
+
+    // 스트림 종료 후 남은 텍스트 처리 (마지막 부분이 텍스트인 경우)
+    if (currentText) {
+       await addSlide(currentText, null); // 이미지 없이 텍스트만 추가
+       slideshow.removeAttribute('hidden');
+       slideAdded = true;
+    }
+
+    if (!slideAdded) {
+      // 유효한 응답이 없는 경우
+      console.warn("Gemini API 스트림으로부터 유효한 내용을 받지 못했습니다.");
+      // 비어있는 경우 오류를 던지지 않도록 수정 (텍스트만 올 수도 있으므로)
+      // throw new Error('Gemini API로부터 유효한 응답(텍스트 또는 이미지)을 받지 못했습니다.');
+    }
+
+    console.log('[generate] 클라이언트 측 Gemini API 스트리밍 호출 완료');
+    enableTTSButton(storyTitle); // TTS 버튼 활성화
+    showGenerationComplete(); // 완료 메시지 표시
+
   } catch (e) {
-    console.error('스토리 Firestore 저장 실패:', e);
-    debugLog('스토리 Firestore 저장 실패: ' + e.message);
-    return false;
+    // 로딩 표시 제거 (오류 시)
+    if (loadingDiv.parentNode) {
+      loadingDiv.remove();
+    }
+    console.error('[generate] 함수 오류 발생:', e);
+    if (e.message) {
+      console.error('[generate] 오류 메시지:', e.message);
+    }
+    // 사용자에게 표시할 메시지
+    let errorMsg = '이야기 생성 중 오류가 발생했습니다.';
+    if (e && typeof e.message === 'string') {
+      // API 키 관련 오류 메시지 감지 (예시)
+      if (e.message.includes('API key not valid')) {
+        errorMsg = 'Gemini API 키가 유효하지 않습니다. 확인해주세요.';
+      } else if (e.message.includes('quota')) {
+        errorMsg = 'API 사용 할당량을 초과했습니다.';
+      } else {
+        errorMsg = `이야기 생성 실패: ${e.message}`;
+      }
+    }
+    errorDisplay.textContent = errorMsg;
+    errorDisplay.hidden = false;
+  } finally {
+    // --- 입력 필드 다시 활성화 --- 
+    if (userInput) {
+      userInput.disabled = false;
+      userInput.focus();
+    }
   }
 }
-
-const saveStoryBtn = document.getElementById('save-story-btn');
-const saveStoryMsg = document.getElementById('save-story-message');
-
-// // saveStoryBtn 클릭 이벤트 핸들러 (임시 주석 처리)
-// if (saveStoryBtn) {
-//   saveStoryBtn.onclick = async () => {
-//     console.log("'이야기 저장하기' 버튼 클릭");
-//     const user = auth.currentUser;
-// 
-//     // 1. 로그인 상태 확인
-//     if (!user) {
-//       console.error('저장 시도: 로그인이 필요합니다.');
-//       alert('이야기를 저장하려면 먼저 로그인해주세요.');
-//       return; // 로그인 안되어 있으면 함수 종료
-//     }
-//     console.log('로그인 확인됨:', user.uid);
-// 
-//     // 2. 저장할 데이터 확인
-//     if (!allStories || allStories.length === 0) {
-//       console.warn('저장할 스토리가 없습니다.');
-//       alert('저장할 이야기가 없습니다. 먼저 이야기를 생성해주세요.');
-//       return;
-//     }
-//     console.log(`저장할 스토리 제목: "${storyTitle}", 총 슬라이드: ${allStories.length}개`);
-// 
-//     // 3. 저장 프로세스 시작
-//     let ok = true;
-//     if (!saveStoryMsg) {
-//       console.error('saveStoryMsg DOM 요소가 없습니다.');
-//     } else {
-//       saveStoryMsg.textContent = `0 / ${allStories.length} 저장 중...`;
-//     }
-// 
-//     for (let i = 0; i < allStories.length; i++) {
-//       const story = allStories[i];
-//       console.log(`슬라이드 ${i + 1} 저장 시도...`, story);
-//       if (saveStoryMsg) saveStoryMsg.textContent = `${i + 1} / ${allStories.length} 저장 중...`;
-//       
-//       // saveStoryToFirestore 호출
-//       const result = await saveStoryToFirestore(story.text, story.imageUrl, i + 1, storyTitle);
-//       
-//       if (!result) {
-//         ok = false;
-//         console.error(`슬라이드 ${i + 1} 저장 실패`);
-//         // 실패 시 루프 중단 또는 계속 진행 여부 결정 (여기서는 계속 진행)
-//       }
-//     }
-// 
-//     // 4. 결과 메시지 표시
-//     if (ok) {
-//       console.log('모든 스토리 저장 성공!');
-//       if (saveStoryMsg) {
-//         saveStoryMsg.textContent = '모든 이야기 저장 완료!';
-//         setTimeout(() => { saveStoryMsg.textContent = ''; }, 3000);
-//       }
-//       // 성공 시 스토리 데이터 초기화 (필요에 따라 주석 해제)
-//       // clearLastStory(); 
-//     } else {
-//       console.error('일부 또는 전체 스토리 저장 실패!');
-//       if (saveStoryMsg) {
-//         saveStoryMsg.textContent = '저장 실패!';
-//         setTimeout(() => { saveStoryMsg.textContent = ''; }, 3000);
-//       }
-//     }
-//   };
-// } else {
-//   console.error('save-story-btn 요소를 찾을 수 없습니다.');
-// }
 
 const ttsGenBtn = document.getElementById('tts-gen-btn');
 const ttsGenMsg = document.getElementById('tts-gen-message');
 
-// Firestore에서 stories를 불러와 TTS 생성 및 저장 (수정: ttsUtils 함수 사용)
-async function generateTTSFromFirestore(title) {
+// Firestore에서 stories를 불러와 Cloud Function으로 TTS 생성 요청
+async function triggerGenerateAndSaveTTS(title) {
   const user = auth.currentUser;
   if (!user) {
-    alert('로그인이 필요합니다.');
+    alert('TTS 생성을 위해 로그인이 필요합니다.');
     return;
   }
   if (!ttsGenMsg) {
-    console.error('ttsGenMsg DOM 요소가 없습니다. index.html에 <div id="tts-gen-message"></div>를 추가하세요.');
+    console.error('ttsGenMsg DOM 요소가 없습니다.');
   }
-  if (ttsGenMsg) ttsGenMsg.textContent = '스토리 불러오는 중...';
-  
-  // 1. Firestore에서 stories 불러오기 (order 순)
+  if (ttsGenMsg) ttsGenMsg.textContent = 'TTS 요청 준비 중...';
+
+  // 1. Firestore에서 해당 title의 stories 불러오기 (order 순)
   const q = query(
     collection(db, "stories"),
     where("uid", "==", user.uid),
     where("title", "==", title),
     orderBy("order")
   );
-  
+
   try {
     const snap = await getDocs(q);
     const stories = [];
     snap.forEach(doc => stories.push(doc.data()));
-    
+
     if (!stories.length) {
       if (ttsGenMsg) ttsGenMsg.textContent = '해당 스토리가 없습니다.';
-      if (ttsGenBtn) ttsGenBtn.disabled = false; // 버튼 다시 활성화
       return;
     }
-    
-    let ok = true;
+
+    // 2. 각 스토리에 대해 Cloud Function 호출
+    if (ttsGenMsg) ttsGenMsg.textContent = `총 ${stories.length}개 음성 생성 요청 중...`;
+    let successCount = 0;
+    let failCount = 0;
+    const ttsFunctionUrl = 'https://us-central1-fairytale-186ee.cloudfunctions.net/generateAndSaveTTS'; // 배포된 함수 URL
+
     for (let i = 0; i < stories.length; i++) {
       const story = stories[i];
-      const text = story.text;
-      if (ttsGenMsg) ttsGenMsg.textContent = `${i + 1} / ${stories.length} 음성 생성 중...`;
+      const order = story.order || (i + 1); // order 필드가 없을 경우 대비
+      
+      if (ttsGenMsg) ttsGenMsg.textContent = `${i + 1}/${stories.length} 요청 중: ${title} (파트 ${order})...`;
       
       try {
-        // ttsUtils.js의 함수 호출
-        const audioUrl = await generateAndUploadTTS(text, i + 1, title);
-        await saveTTSUrlToFirestore(audioUrl, i + 1, title);
+        const response = await fetch(ttsFunctionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            text: story.text, 
+            order: order, 
+            title: title, 
+            uid: user.uid // 사용자 UID 전달
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          console.error(`[TTS Trigger] Cloud Function 호출 실패 (Story ${order}):`, result);
+          failCount++;
+        } else {
+          console.log(`[TTS Trigger] Cloud Function 호출 성공 (Story ${order}):`, result);
+          successCount++;
+        }
       } catch (e) {
-        ok = false;
-        console.error(`TTS 생성 실패 (Story ${i + 1}):`, e);
-        if (ttsGenMsg) ttsGenMsg.textContent = `음성 생성 실패 (Story ${i+1})`;
-        // 실패 시 루프 중단 또는 사용자에게 알림 강화 가능
-        break; // 한 번 실패하면 중단
+        console.error(`[TTS Trigger] fetch 오류 (Story ${order}):`, e);
+        failCount++;
       }
     }
-    
-    // 최종 결과 메시지
-    if (ok) {
-      if (ttsGenMsg) {
-        ttsGenMsg.textContent = '모든 음성 생성 완료!';
-        setTimeout(() => { if (ttsGenMsg) ttsGenMsg.textContent = ''; }, 3000);
+
+    // 3. 최종 결과 메시지
+    if (ttsGenMsg) {
+      let finalMsg = `TTS 생성 요청 완료: 총 ${stories.length}개 중 ${successCount}개 성공`;
+      if (failCount > 0) {
+        finalMsg += `, ${failCount}개 실패`;
       }
-    } else {
-      // 실패 메시지는 루프 내에서 이미 표시됨
-      // 필요하다면 여기서 추가적인 실패 처리
+      ttsGenMsg.textContent = finalMsg;
+      setTimeout(() => { if (ttsGenMsg) ttsGenMsg.textContent = ''; }, 5000); // 5초 후 메시지 지우기
     }
-    
+
   } catch (error) {
-    console.error("Firestore 스토리 로딩 또는 TTS 처리 중 오류:", error);
+    console.error("Firestore 스토리 로딩 또는 TTS 요청 중 오류:", error);
     if (ttsGenMsg) ttsGenMsg.textContent = '오류 발생!';
-  } finally {
-    if (ttsGenBtn) ttsGenBtn.disabled = false; // 작업 완료 후 버튼 활성화
   }
 }
 
-// --- 갤러리 슬라이드 자동 오픈 및 완료 안내 ---
+// ttsGenBtn 클릭 핸들러 (수정: triggerGenerateAndSaveTTS 호출)
+if (ttsGenBtn) {
+  ttsGenBtn.onclick = async () => {
+    if (!ttsGenBtn) return; 
+    ttsGenBtn.disabled = true; // 버튼 비활성화
+    
+    // 현재 storyTitle 사용 (generate 함수에서 설정됨)
+    let title = storyTitle;
+    if (!title) {
+      // TODO: 갤러리 등 다른 곳에서 제목을 가져오는 로직 필요 시 추가
+      alert('먼저 스토리를 생성해주세요.'); 
+      ttsGenBtn.disabled = false; // 버튼 다시 활성화
+      return;
+    }
+    
+    await triggerGenerateAndSaveTTS(title);
+    
+    ttsGenBtn.disabled = false; // 작업 완료 후 버튼 활성화
+  };
+}
+
+// --- openGalleryAfterGeneration 함수 수정 --- 
 async function openGalleryAfterGeneration() {
-  // 이미지 슬라이드가 하나 이상 생성되었는지 확인
-  if (allStories.length === 0) {
-    alert('이미지가 생성되지 않아 갤러리를 열 수 없습니다.');
+  // 스토리 저장은 여기서 하지 않음 (save 버튼 클릭 시 처리하도록 변경 필요)
+  console.log('[openGalleryAfterGeneration] 호출됨, allStories 길이:', allStories.length);
+  
+  // allStories 배열이 채워졌는지 확인 (addSlide에서 채워짐)
+  if (!allStories || allStories.length === 0) {
+    alert('이야기가 생성되지 않아 갤러리를 열 수 없습니다. (이미지/텍스트 확인 필요)');
     return;
   }
-  // 최신 생성 스토리만 Firestore에 저장 (order 부여)
-  for (let i = 0; i < allStories.length; i++) {
-    await saveStoryToFirestore(allStories[i].text, allStories[i].imageUrl, i, storyTitle);
-  }
-  // 갤러리 페이지로 이동 (최신 생성된 스토리 강조)
-  window.location.href = `gallery.html?title=${encodeURIComponent(storyTitle)}`;
+
+  // TODO: Firestore에 저장하는 로직은 '이야기 저장하기' 버튼 클릭 시 수행하도록 변경 필요
+  // 현재는 갤러리 페이지만 이동
+  window.location.href = `gallery.html?title=${encodeURIComponent(storyTitle)}`; 
 }
 
 // --- 생성 완료 안내 메시지 ---
@@ -468,6 +449,80 @@ function showGenerationComplete() {
   modelOutput.appendChild(doneMsg);
 }
 
+// Firestore에 저장하는 로직 함수 (DB 구조 반영 수정)
+async function saveStoryToFirebase() {
+  const user = auth.currentUser;
+  const saveBtn = document.getElementById('save-story-btn');
+  const saveMsg = document.getElementById('save-story-message'); // ID 수정
+
+  if (!user) {
+    alert('스토리 저장을 위해 로그인이 필요합니다.');
+    return;
+  }
+
+  if (!allStories || allStories.length === 0) {
+    alert('저장할 스토리가 없습니다.');
+    return;
+  }
+
+  if (saveBtn) saveBtn.disabled = true;
+  if (saveMsg) saveMsg.textContent = '스토리 저장 중...';
+
+  try {
+    // Firestore 저장을 위한 트랜잭션 또는 Batch 사용 고려 가능 (선택 사항)
+    // 여기서는 각 슬라이드를 순차적으로 저장
+    for (let i = 0; i < allStories.length; i++) {
+      const storyPart = allStories[i];
+      let imageUrl = null;
+
+      // 1. 이미지 데이터가 있으면 Storage에 업로드하고 URL 얻기
+      if (storyPart.imageData) {
+        const imageName = `${Date.now()}-${i}.png`; // 고유 파일 이름 생성
+        const storageRef = ref(storage, `stories/${user.uid}/${storyTitle}/${imageName}`);
+        try {
+           const uploadTask = await uploadString(storageRef, storyPart.imageData, 'base64', {
+             contentType: 'image/png' // MIME 타입 명시
+           });
+           imageUrl = await getDownloadURL(uploadTask.ref);
+           console.log(`[Save Story] Image ${i+1} uploaded: ${imageUrl}`);
+        } catch(uploadError) {
+           console.error(`[Save Story] Image ${i+1} upload failed:`, uploadError);
+           // 이미지 업로드 실패 시 처리 (예: 건너뛰거나 전체 저장 실패 처리)
+           if (saveMsg) saveMsg.textContent = `오류: 이미지 ${i+1} 업로드 실패.`;
+           throw uploadError; // 저장 중단
+        }
+      }
+
+      // 2. Firestore에 데이터 저장
+      const storyData = {
+        uid: user.uid,
+        title: storyTitle,
+        order: i + 1, // 1부터 시작하는 순서
+        text: storyPart.text || '', // 텍스트 없으면 빈 문자열
+        imageUrl: imageUrl, // 이미지 URL 또는 null
+        createdAt: serverTimestamp()
+      };
+
+      await addDoc(collection(db, "stories"), storyData);
+      console.log(`[Save Story] Story part ${i+1} saved to Firestore.`);
+      if (saveMsg) saveMsg.textContent = `스토리 ${i+1}/${allStories.length} 저장 완료...`;
+    }
+
+    if (saveMsg) {
+       saveMsg.textContent = '스토리가 성공적으로 저장되었습니다!';
+       // 갤러리 이동 버튼 활성화 또는 자동 이동 등 추가 구현 가능
+       // 예: const galleryBtn = document.getElementById('go-to-gallery-btn'); if(galleryBtn) galleryBtn.disabled = false;
+       setTimeout(() => { if (saveMsg) saveMsg.textContent = ''; }, 5000);
+    }
+
+  } catch (error) {
+    console.error("[Save Story] Firestore 저장 중 오류 발생:", error);
+    if (saveMsg) saveMsg.textContent = '스토리 저장 중 오류가 발생했습니다.';
+  } finally {
+    if (saveBtn) saveBtn.disabled = false; // 완료 또는 오류 시 버튼 다시 활성화
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DOMContentLoaded 이벤트 발생');
 
@@ -475,6 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const userInput = document.querySelector('#input');
   const runBtn = document.querySelector('#run-btn');
   const saveStoryBtn = document.getElementById('save-story-btn');
+  const saveMsg = document.getElementById('save-story-message'); // 메시지 표시용 div
   const ttsGenBtn = document.getElementById('tts-gen-btn');
   const loginLink = document.getElementById('login-link');
   const logoutBtn = document.getElementById('logout-btn');
@@ -664,6 +720,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const message = userInput.value.trim();
     if (message) await generate(message);
   });
+
+  // --- 이야기 저장 버튼 핸들러 추가 ---
+  if (saveStoryBtn) {
+    saveStoryBtn.onclick = async () => {
+      await saveStoryToFirebase(); // 위에서 정의한 저장 함수 호출
+    };
+    console.log('[Init UI] saveStoryBtn 이벤트 리스너 등록됨');
+  } else {
+     console.error('[Init UI] saveStoryBtn 요소를 찾을 수 없음!');
+  }
 
   // 기타 버튼 예시 (기존)
   galleryLink.addEventListener('click', (e) => {

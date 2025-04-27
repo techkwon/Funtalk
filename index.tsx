@@ -26,7 +26,7 @@ const additionalInstructions = `
 Use a fairy tale story about white Pomeranian as a metaphor.
 Keep sentences short but conversational, casual, educational and engaging.
 Generate a cute, animate for each sentence with ink-painting on white background.
-No commentary, just begin your explanation.
+No commentary, just begin your explanation. speak in Korean.
 Keep going until you're done.`;
 
 async function addSlide(text: string, image: HTMLImageElement) {

@@ -1,8 +1,8 @@
 [
   {
-    "origin": ["http://localhost:5173"],
-    "method": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    "maxAgeSeconds": 3600,
-    "responseHeader": ["Content-Type", "Authorization", "x-goog-resumable"]
+    "origin": ["https://fairytale-186ee.web.app"],
+    "method": ["GET", "POST", "PUT", "HEAD", "DELETE"],
+    "responseHeader": ["Content-Type", "Access-Control-Allow-Origin"],
+    "maxAgeSeconds": 3600
   }
 ]
